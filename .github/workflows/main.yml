@@ -20,4 +20,5 @@ jobs:
       - name: Download Artifact
         uses: actions/upload-artifact@v2
         with:
+          name: 'PDF-Artifact'
           path: main.pdf
