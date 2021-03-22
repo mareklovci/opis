@@ -28,7 +28,7 @@ Právě v překryvu dvou skupin lze hledat entity vhodné pro párování.
 
 \begin{figure}[htbp]
 	\centering
-	\includegraphics[width=0.9\textwidth]{img/psm-vs-class.png}
+	\includegraphics[width=0.9\textwidth]{graphs/psm-vs-class.png}
 	\caption{Klasifikace vs PSM}
 \end{figure}
 \FloatBarrier
@@ -41,6 +41,22 @@ Při provádění metod statistického párování postupujeme tedy následovně
     \item vypočteme skóre podobnosti (logistickou regresí, či jinou metodou);
     \item dle skóre z předešlého kroku spárujeme prvky z kontrolní a experimentální skupiny (například pomocí algoritmu pro hledání nejbližšího souseda).
 \end{enumerate}
+
+Výběr příznaků pro metodu PSM je volbou analytika v závislosti na konkrétní situaci.
+Jak již bylo zmíněno výše, je nutné zvolit takové příznaky, které umožní najít jistý překryv kontrolní a léčené skupiny.
+
+Při výpočtu skóre náchylnosti je výchozí volbou \textit{logistická regrese}.
+Použití jiných metod záleží (stejně jako u \textit{výběru příznaků}) pouze na analytikovi a dané situaci.
+V článku \enquote{Propensity score estimation: machine learning and classification methods as alternatives to logistic regression} z roku 2010 popisují autoři použití i neuronových sítí, SVM a rozhodovacích stromů.
+Nejčastější alternativní volbou by byl pravděpodobně Bayesův klasifikátor.
+Ten podle článku \enquote{Bayesian propensity score analysis for observational data} z roku 2009 bude lepší volbou obzvláště v případech, kdy se v datech nachází nějaká míra nejistoty.
+
+Při párování se pro každý prvek experimentu hledá prvek v kontrolní skupině.
+Implicitně se předpokládá, že kontrolní skupina je početnější, jelikož léčba je obvykle nákladná nebo nemoc vzácná.
+Otázka nastává, co dělat s případy, kdy je kontrolní skupina menší než léčená (což nastává i v naší situaci).
+V takových případech je metoda PSM stále validní možností, protože úloha není nutně o~hledání párů dat, ale spíše o~hledání dvou srovnatelných skupin dat.
+Toho i v tomto \enquote{inverzním} případě dosáhneme (ani se nemění směr párování).
+Dle dostupných informací na fórech je však rozumné uvážit (a nastudovat) i další metody, jako např. \textit{Coarsened Exact Matching}, které v takových případech mohou být někdy vhodnější.
 
 \subsubsection{Kovariát (covariate)}
 
@@ -101,7 +117,7 @@ Jedná se o řešení, kdy subjekt z~experimentální skupiny je spárován s n�
 \subsection{Ověření hypotéz}
 
 V rámci implementace PSM byli na datech ověřeny 2 hypotézy.
-První hypotézou je, že provedení léčebných postupů vede ke snížení NIHSS sledovaných pacientů.
+První hypotézou \( H_1 \) je, že provedení léčebných postupů vede ke snížení NIHSS sledovaných pacientů.
 Hypotézy byly definovány následovně:
 
 \begin{itemize}
@@ -109,7 +125,7 @@ Hypotézy byly definovány následovně:
     \item $H_A$: provedení léčebných postupů \textit{vede} ke snížení NIHSS sledovaných pacientů.
 \end{itemize}
 
-Druhou ověřovanou hypotézou bylo, že u pacientů ve věku do 65 let provedení léčebných postupů vede ke snížení NIHSS většímu než u pacientů nad 65 let.
+Druhou ověřovanou hypotézou \( H_2 \) bylo, že u pacientů ve věku do 65 let provedení léčebných postupů vede ke snížení NIHSS většímu než u pacientů nad 65 let.
 
 \begin{itemize}
     \item $H_0$: u pacientů ve věku do 65 let provedení léčebných postupů (Trombectomie, Trombolýza, Bridge) \textit{nevede} ke snížení NIHSS ve srovnání s pacienty nad 65 let;
@@ -119,16 +135,42 @@ Druhou ověřovanou hypotézou bylo, že u pacientů ve věku do 65 let proveden
 V obou případech se podařilo T-testem zamítnout nulovou hypotézu na úrovni hladiny \( \alpha = 5 \: \% \) a~přijmout hypotézu alternativní.
 
 \begin{table}[htbp]
-    \begin{tabular}{lll}
-         & Statistika & p-value  \\
-    H\_1 & -4.63      & 0.000005 \\
-    H\_2 & -2.95      & 0.003173
+    \centering
+
+    \begin{tabular}{@{}lllcc@{}}
+        \toprule
+                    & Statistika & p-value         & Velikost kontrolní skupiny    & Velikost exponované skupiny   \\ \midrule
+        \( H_1 \)  & -7.99      & \num{2.6e-15}   & 1312                          & 1578                          \\
+        \( H_2 \)  & -5.63      & \num{2.3e-8}    & 385                           & 1193                          \\
+        \bottomrule
     \end{tabular}
+
 \end{table}
 \FloatBarrier
 
 Dle výsledků statistik z tabulky výše můžeme vyvodit, že léčení pacienta (první hypotéza) vede ke znatelnému snížení NIHSS (znaménko mínus ve statistice lze v tomto případě interpretovat jako snížení NIHSS).
 U druhé hypotézy můžeme soudit obdobně.
+
+Datasetu obsahuje celkem 2890 záznamů.
+V první hypotéze uvažujeme celý dataset rozdělený do dvou skupin, přičemž kontrolní skupina obsahuje 1312 záznamů a exponovaná skupina (léčená) obsahuje celkem 1578 záznamů (66 trombektomií, 1251 trombolýz a 261 bridge), pro kontrolu \( 66 + 1251 + 261 = 1578 \) a~\( 1312 + 1578 = 2890 \).
+V druhé hypotéze uvažujeme redukovaný dataset, pouze léčených pacientů (celkem 1578 záznamů), rozdělený podle věku pacientů (nad 65 let včetně v počtu 1193 a pod 65 let v počtu 385~pacientů).
+
+Při párování se v uvažovaných hypotézách, kvůli dominanci exponované skupiny, multiplikují prvky z~kontrolních skupin.
+Párování proběhne vždy v celém oboru léčené skupiny, je tedy párováno 1578 dvojic pro \( H_1 \) a 1193 dvojic pro \( H_2 \).
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{graphs/h1.eps}
+	\caption{Graf Propensity Scores pro \( H_1 \)}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.6\textwidth]{graphs/h2.eps}
+	\caption{Graf Propensity Scores pro \( H_2 \)}
+\end{figure}
+\FloatBarrier
 
 \section{Závěr}
 
